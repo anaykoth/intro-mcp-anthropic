@@ -1,5 +1,6 @@
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
+from mcp.server.fastmcp.prompts import base
 
 mcp = FastMCP("DocumentMCP", log_level="ERROR")
 
@@ -41,9 +42,65 @@ def edit_document(
     docs[doc_id] = docs[doc_id].replace(old_string, new_string)
     return docs[doc_id]
 # TODO: Write a resource to return all doc id's
+@mcp.resource(
+    "docs://documents",
+    mime_type="application/json",
+)
+def list_docs() -> list[str]:
+    return list(docs.keys())
 # TODO: Write a resource to return the contents of a particular doc
+@mcp.resource(
+    "docs://documents/{doc_id}",
+    mime_type="text/plain"
+)
+def fetch_doc(doc_id: str) -> str:
+    if doc_id not in docs:
+        raise ValueError(f"Document with ID {doc_id} not found")
+    return docs[doc_id]
 # TODO: Write a prompt to rewrite a doc in markdown format
-# TODO: Write a prompt to summarize a doc
+@mcp.prompt(
+    name="format",
+    description="Rewrites the contents of the document in markdown format"
+)
+def format_doc(
+    doc_id: str = Field(description="The ID of the document to format")
+)-> list[base.Message]:
+    prompt = f"""
+Your goal is to reformat a document to be written with markdown syntax.
+
+The id of the document you need to reformat is:
+<document_id>
+{doc_id}
+</document_id>
+
+Add in headers, bullet points, tables, etc as necessary. Feel free to add in structure.
+Use the 'edit_document' tool to edit the document. After the document has been reformatted...
+"""
+    
+    return [
+        base.UserMessage(prompt)
+    ]
+@mcp.prompt(
+    name="summarize",
+    description="Summarizes the contents of a document"
+)
+def summarize_doc(
+    doc_id: str = Field(description="The ID of the document to summarize")
+) -> list[base.Message]:
+    prompt = f"""
+Your goal is to produce a concise summary of a document.
+
+The id of the document you need to summarize is:
+<document_id>
+{doc_id}
+</document_id>
+
+Use the 'read_doc_contents' tool to read the document, then provide a short summary covering
+the key points. Keep it to a few sentences.
+"""
+    return [
+        base.UserMessage(prompt)
+    ]
 
 
 if __name__ == "__main__":

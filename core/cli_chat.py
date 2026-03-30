@@ -1,3 +1,4 @@
+import json
 from typing import List, Tuple
 from mcp.types import Prompt, PromptMessage
 from anthropic.types import MessageParam
@@ -22,7 +23,8 @@ class CliChat(Chat):
         return await self.doc_client.list_prompts()
 
     async def list_docs_ids(self) -> list[str]:
-        return await self.doc_client.read_resource("docs://documents")
+        result = await self.doc_client.read_resource("docs://documents")
+        return json.loads(result)
 
     async def get_doc_content(self, doc_id: str) -> str:
         return await self.doc_client.read_resource(f"docs://documents/{doc_id}")
